@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.jooby</groupId>
     <artifactId>jooby-project</artifactId>
-    <version>1.4.1</version>
+    <version>1.5.0</version>
   </parent>
 
   <artifactId>pac4j-starter</artifactId>
@@ -16,7 +16,7 @@
   <name>pac4j-starter</name>
 
   <properties>
-    <jooby.version>1.4.1</jooby.version>
+    <jooby.version>1.5.0</jooby.version>
 
     <!-- Startup class -->
     <application.class>starter.pac4j.App</application.class>
