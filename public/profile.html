@@ -31,6 +31,7 @@
 {{#if profile.email}}
     <div class="mail-text">E-mail: {{profile.email}}</div>
 {{/if}}
+    <div class="mail-text"><a href="{{contextPath}}/generate-token">Generate JWT Token</a></div>
     <a class="create-acc" href="{{contextPath}}/logout?url={{contextPath}}{{path}}">Logout</a>
 </div>
 </body>

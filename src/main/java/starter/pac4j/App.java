@@ -1,17 +1,21 @@
 package starter.pac4j;
 
+import com.typesafe.config.Config;
 import org.jooby.Jooby;
+import org.jooby.MediaType;
 import org.jooby.Results;
 import org.jooby.hbs.Hbs;
+import org.jooby.json.Jackson;
 import org.jooby.pac4j.Pac4j;
 import org.pac4j.core.context.Pac4jConstants;
-import org.pac4j.core.context.WebContext;
 import org.pac4j.core.credentials.UsernamePasswordCredentials;
 import org.pac4j.core.profile.CommonProfile;
-import org.pac4j.core.profile.UserProfile;
 import org.pac4j.core.profile.definition.CommonProfileDefinition;
+import org.pac4j.http.client.direct.ParameterClient;
 import org.pac4j.http.client.indirect.FormClient;
-import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator;
+import org.pac4j.jwt.config.signature.SecretSignatureConfiguration;
+import org.pac4j.jwt.credentials.authenticator.JwtAuthenticator;
+import org.pac4j.jwt.profile.JwtGenerator;
 import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.TwitterClient;
 import org.pac4j.oidc.client.OidcClient;
@@ -21,10 +25,12 @@ import org.pac4j.oidc.config.OidcConfiguration;
  * Pac4j starter project.
  */
 public class App extends Jooby {
-
   {
     assets("/css/**");
     assets("/images/**");
+
+    /** JSON: */
+    use(new Jackson());
 
     /** Template engine: */
     use(new Hbs());
@@ -49,6 +55,14 @@ public class App extends Jooby {
           oidc.addCustomParam("prompt", "consent");
           return new OidcClient(oidc);
         })
+        /** Login with JWT: */
+        .client("/api/**", conf -> {
+          ParameterClient client = new ParameterClient("token",
+              new JwtAuthenticator(new SecretSignatureConfiguration(conf.getString("jwt.salt"))));
+          client.setSupportGetRequest(true);
+          client.setSupportPostRequest(false);
+          return client;
+        })
         /** Fallback to form login: */
         .client(conf ->
             new FormClient("/login", ((credentials, context) -> {
@@ -64,13 +78,33 @@ public class App extends Jooby {
 
     /** Protected pages: */
     get("/", "/profile", () -> {
-      UserProfile profile = require(UserProfile.class);
-      return Results.html("profile").put("profile", profile);
+      Config conf = require(Config.class);
+      CommonProfile profile = require(CommonProfile.class);
+      return Results.html("profile")
+          .put("jwtToken", generateToken(conf, profile))
+          .put("profile", profile);
     });
+
+    /** Generate Token for user: */
+    get("/generate-token", () -> {
+      String token = generateToken(require(Config.class), require(CommonProfile.class));
+      return Results.ok(token)
+          .type(MediaType.text);
+    });
+
+    /** API protected via JWT: */
+    get("/api/profile", () ->
+        require(CommonProfile.class).getAttributes()
+    );
+  }
+
+  private String generateToken(Config conf, CommonProfile profile) {
+    JwtGenerator<CommonProfile> jwtGenerator = new JwtGenerator<>(
+        new SecretSignatureConfiguration(conf.getString("jwt.salt")));
+    return jwtGenerator.generate(profile);
   }
 
   public static void main(final String[] args) {
     run(App::new, args);
   }
-
 }

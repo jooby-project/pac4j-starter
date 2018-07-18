@@ -31,6 +31,16 @@
 
     <dependency>
       <groupId>org.jooby</groupId>
+      <artifactId>jooby-jackson</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jooby</groupId>
+      <artifactId>jooby-hbs</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jooby</groupId>
       <artifactId>jooby-pac4j2</artifactId>
     </dependency>
 
@@ -45,8 +55,8 @@
     </dependency>
 
     <dependency>
-      <groupId>org.jooby</groupId>
-      <artifactId>jooby-hbs</artifactId>
+      <groupId>org.pac4j</groupId>
+      <artifactId>pac4j-jwt</artifactId>
     </dependency>
 
     <!-- Tests -->

@@ -12,6 +12,7 @@ This project contains a simple application that:
     * Facebook
     * Twitter
     * Google
+    * JWT
     * Custom login form
  
 
@@ -19,10 +20,12 @@ This project contains a simple application that:
 
 ```java
 public class App extends Jooby {
-
   {
     assets("/css/**");
     assets("/images/**");
+
+    /** JSON: */
+    use(new Jackson());
 
     /** Template engine: */
     use(new Hbs());
@@ -47,6 +50,14 @@ public class App extends Jooby {
           oidc.addCustomParam("prompt", "consent");
           return new OidcClient(oidc);
         })
+        /** Login with JWT: */
+        .client("/api/**", conf -> {
+          ParameterClient client = new ParameterClient("token",
+              new JwtAuthenticator(new SecretSignatureConfiguration(conf.getString("jwt.salt"))));
+          client.setSupportGetRequest(true);
+          client.setSupportPostRequest(false);
+          return client;
+        })
         /** Fallback to form login: */
         .client(conf ->
             new FormClient("/login", ((credentials, context) -> {
@@ -62,15 +73,35 @@ public class App extends Jooby {
 
     /** Protected pages: */
     get("/", "/profile", () -> {
-      UserProfile profile = require(UserProfile.class);
-      return Results.html("profile").put("profile", profile);
+      Config conf = require(Config.class);
+      CommonProfile profile = require(CommonProfile.class);
+      return Results.html("profile")
+          .put("jwtToken", generateToken(conf, profile))
+          .put("profile", profile);
     });
+
+    /** Generate Token for user: */
+    get("/generate-token", () -> {
+      String token = generateToken(require(Config.class), require(CommonProfile.class));
+      return Results.ok(token)
+          .type(MediaType.text);
+    });
+
+    /** API protected via JWT: */
+    get("/api/profile", () ->
+        require(CommonProfile.class).getAttributes()
+    );
+  }
+
+  private String generateToken(Config conf, CommonProfile profile) {
+    JwtGenerator<CommonProfile> jwtGenerator = new JwtGenerator<>(
+        new SecretSignatureConfiguration(conf.getString("jwt.salt")));
+    return jwtGenerator.generate(profile);
   }
 
   public static void main(final String[] args) {
     run(App::new, args);
   }
-
 }
 ```
 
@@ -85,6 +116,16 @@ Open a browser and type:
 ## screenshot
 
 ![Pac4j Starter](https://github.com/jooby-project/pac4j-starter/raw/master/public/images/pac4jstarter.png)
+
+## JWT
+
+Please follow these steps to use JWT login:
+
+- Login via one of available method (Twitter, Facebook, Google, Form)
+- From profile page, click on **Generate JWT Token**
+- Copy the generated token to clipboard
+- Logout or use a new clean browser session
+- Type: `http://localhost:8080/api/profile?token=$YOUR_TOKEN_GOES_HERE`
 
 ## help
 
